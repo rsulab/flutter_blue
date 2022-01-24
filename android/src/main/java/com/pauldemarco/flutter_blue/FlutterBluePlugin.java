@@ -235,12 +235,12 @@ public class FlutterBluePlugin implements FlutterPlugin, MethodCallHandler, Requ
 
             case "startScan":
             {
-                ensurePermissionBeforeAction(Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ? Manifest.permission.BLUETOOTH_SCAN : Manifest.permission.ACCESS_FINE_LOCATION, (granted, permission) -> {
+                ensurePermissionsBeforeAction(new String[]{ Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT }, Manifest.permission.ACCESS_FINE_LOCATION, (granted, permission) -> {
                     if (granted)
                         startScan(call, result);
                     else
                         result.error(
-                                "no_permissions", String.format("flutter_blue plugin requires %s for scanning", permission), null);
+                            "no_permissions", String.format("flutter_blue plugin requires %s for scanning", permission), null);
                 });
                 break;
             }
@@ -254,7 +254,7 @@ public class FlutterBluePlugin implements FlutterPlugin, MethodCallHandler, Requ
 
             case "getConnectedDevices":
             {
-                ensurePermissionBeforeAction(Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ? Manifest.permission.BLUETOOTH_CONNECT : null, (granted, permission) -> {
+                ensurePermissionBeforeAction(Manifest.permission.BLUETOOTH_CONNECT, null, (granted, permission) -> {
                     if (!granted) {
                         result.error(
                                 "no_permissions", String.format("flutter_blue plugin requires %s for obtaining connected devices", permission), null);
@@ -271,20 +271,9 @@ public class FlutterBluePlugin implements FlutterPlugin, MethodCallHandler, Requ
                 break;
             }
 
-            case "getBondedDevices": {
-                final Set<BluetoothDevice> bondedDevices = mBluetoothAdapter.getBondedDevices();
-                Protos.ConnectedDevicesResponse.Builder p = Protos.ConnectedDevicesResponse.newBuilder();
-                for (BluetoothDevice d : bondedDevices) {
-                    p.addDevices(ProtoMaker.from(d));
-                }
-                result.success(p.build().toByteArray());
-                log(LogLevel.EMERGENCY, "mDevices size: " + mDevices.size());
-                break;
-            }
-
             case "connect":
             {
-                ensurePermissionBeforeAction(Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ? Manifest.permission.BLUETOOTH_CONNECT : null, (granted, permission) -> {
+                ensurePermissionBeforeAction(Manifest.permission.BLUETOOTH_CONNECT, null, (granted, permission) -> {
                     if (!granted) {
                         result.error(
                                 "no_permissions", String.format("flutter_blue plugin requires %s for new connection", permission), null);
@@ -329,6 +318,7 @@ public class FlutterBluePlugin implements FlutterPlugin, MethodCallHandler, Requ
                     mDevices.put(deviceId, new BluetoothDeviceCache(gattServer));
                     result.success(null);
                 });
+                break;
             }
 
             case "disconnect":
@@ -655,21 +645,34 @@ public class FlutterBluePlugin implements FlutterPlugin, MethodCallHandler, Requ
         }
     }
 
-    void ensurePermissionBeforeAction(String permission, OperationOnPermission operation) {
-        if (permission != null &&
-                ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED) {
+    private void ensurePermissionBeforeAction(String permissionA12, String permission, OperationOnPermission operation) {
+        ensurePermissionsBeforeAction(new String[]{ permissionA12 }, permission, operation);
+    }
+
+    private void ensurePermissionsBeforeAction(String[] permissionsA12, String permission, OperationOnPermission operation) {
+        String[] permissions = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ? permissionsA12 : permission != null ? new String[] { permission } : null;
+        if (!allPermissionsGranted(permissions)) {
             operationsOnPermission.put(lastEventId, (granted, perm) -> {
                 operationsOnPermission.remove(lastEventId);
                 operation.op(granted, perm);
             });
             ActivityCompat.requestPermissions(
                     activityBinding.getActivity(),
-                    new String[]{permission},
+                    permissions,
                     lastEventId);
             lastEventId++;
         } else {
             operation.op(true, permission);
         }
+    }
+
+    private boolean allPermissionsGranted(String[] permissions) {
+        if (permissions == null) return true;
+        for (int i = 0; i < permissions.length; i++) {
+            if (ContextCompat.checkSelfPermission(context, permissions[i]) != PackageManager.PERMISSION_GRANTED)
+                return false;
+        }
+        return true;
     }
 
     @Override
@@ -1035,14 +1038,14 @@ public class FlutterBluePlugin implements FlutterPlugin, MethodCallHandler, Requ
         });
     }
 
-    enum LogLevel
+    private enum LogLevel
     {
         EMERGENCY, ALERT, CRITICAL, ERROR, WARNING, NOTICE, INFO, DEBUG
     }
 
     // BluetoothDeviceCache contains any other cached information not stored in Android Bluetooth API
     // but still needed Dart side.
-    static class BluetoothDeviceCache {
+    private static class BluetoothDeviceCache {
         final BluetoothGatt gatt;
         int mtu;
 
