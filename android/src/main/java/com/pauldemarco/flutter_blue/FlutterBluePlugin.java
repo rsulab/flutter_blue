@@ -235,13 +235,13 @@ public class FlutterBluePlugin implements FlutterPlugin, MethodCallHandler, Requ
 
             case "startScan":
             {
-                ensurePermissionsBeforeAction(new String[]{ Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT }, Manifest.permission.ACCESS_FINE_LOCATION, (granted, permission) -> {
+                ensurePermissionsBeforeAction(new String[]{ Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT }, Manifest.permission.ACCESS_FINE_LOCATION, new OperationOnPermission() { public void op(boolean granted, String permission) {
                     if (granted)
                         startScan(call, result);
                     else
                         result.error(
                             "no_permissions", String.format("flutter_blue plugin requires %s for scanning", permission), null);
-                });
+                }});
                 break;
             }
 
@@ -254,7 +254,7 @@ public class FlutterBluePlugin implements FlutterPlugin, MethodCallHandler, Requ
 
             case "getConnectedDevices":
             {
-                ensurePermissionBeforeAction(Manifest.permission.BLUETOOTH_CONNECT, null, (granted, permission) -> {
+                ensurePermissionBeforeAction(Manifest.permission.BLUETOOTH_CONNECT, null, new OperationOnPermission() { public void op(boolean granted, String permission) {
                     if (!granted) {
                         result.error(
                                 "no_permissions", String.format("flutter_blue plugin requires %s for obtaining connected devices", permission), null);
@@ -267,13 +267,13 @@ public class FlutterBluePlugin implements FlutterPlugin, MethodCallHandler, Requ
                     }
                     result.success(p.build().toByteArray());
                     log(LogLevel.EMERGENCY, "mDevices size: " + mDevices.size());
-                });
+                }});
                 break;
             }
 
             case "connect":
             {
-                ensurePermissionBeforeAction(Manifest.permission.BLUETOOTH_CONNECT, null, (granted, permission) -> {
+                ensurePermissionBeforeAction(Manifest.permission.BLUETOOTH_CONNECT, null, new OperationOnPermission() { public void op(boolean granted, String permission) {
                     if (!granted) {
                         result.error(
                                 "no_permissions", String.format("flutter_blue plugin requires %s for new connection", permission), null);
@@ -317,7 +317,7 @@ public class FlutterBluePlugin implements FlutterPlugin, MethodCallHandler, Requ
                     }
                     mDevices.put(deviceId, new BluetoothDeviceCache(gattServer));
                     result.success(null);
-                });
+                }});
                 break;
             }
 

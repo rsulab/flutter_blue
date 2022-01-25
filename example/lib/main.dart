@@ -186,10 +186,7 @@ class DeviceScreen extends StatelessWidget {
     ];
   }
 
-  List<Widget> _buildServiceTiles(List<BluetoothService>? services) {
-    if (services == null) {
-      return [];
-    }
+  List<Widget> _buildServiceTiles(List<BluetoothService> services) {
     return services
         .map(
           (s) => ServiceTile(
@@ -318,7 +315,7 @@ class DeviceScreen extends StatelessWidget {
               initialData: [],
               builder: (c, snapshot) {
                 return Column(
-                  children: _buildServiceTiles(snapshot.data),
+                  children: _buildServiceTiles(snapshot.data ?? []),
                 );
               },
             ),
