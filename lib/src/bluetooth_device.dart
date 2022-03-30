@@ -27,7 +27,7 @@ class BluetoothDevice {
       ..remoteId = id.toString()
       ..androidAutoConnect = autoConnect;
 
-    Timer timer;
+    Timer? timer;
     if (timeout != null) {
       timer = Timer(timeout, () {
         disconnect();
