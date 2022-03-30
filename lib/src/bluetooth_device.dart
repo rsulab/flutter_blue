@@ -22,6 +22,7 @@ class BluetoothDevice {
     Duration? timeout,
     bool autoConnect = true,
   }) async {
+    final completer = Completer<void>();
     var request = protos.ConnectRequest.create()
       ..remoteId = id.toString()
       ..androidAutoConnect = autoConnect;
@@ -30,7 +31,8 @@ class BluetoothDevice {
     if (timeout != null) {
       timer = Timer(timeout, () {
         disconnect();
-        throw TimeoutException('Failed to connect in time.', timeout);
+        completer.completeError(
+            TimeoutException('Failed to connect in time.', timeout));     
       });
     }
 
@@ -40,8 +42,10 @@ class BluetoothDevice {
     await state.firstWhere((s) => s == BluetoothDeviceState.connected);
 
     timer?.cancel();
+    
+    completer.complete();
 
-    return;
+    return completer.future;
   }
 
   /// Cancels connection to the Bluetooth Device
